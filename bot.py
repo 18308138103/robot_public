@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 
 import os
 
-TOKEN = os.getenv("8315308209:AAEZdx14nEWTlEmCpr7vKjz0KNDNwcPgdgU")
+TOKEN = os.getenv("TOKEN")
 
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("我在运行中 👍")
