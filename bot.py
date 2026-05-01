@@ -5,6 +5,8 @@ import os
 
 TOKEN = os.getenv("TOKEN")
 
+print("TOKEN:", TOKEN)
+
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("我在运行中 👍")
 
