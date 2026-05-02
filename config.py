@@ -1,2 +1,2 @@
-TOKEN = "你的BOT_TOKEN"
-DEFAULT_INTERVAL = 3600  # 默认1小时
+import os
+TOKEN = os.getenv("TOKEN")
