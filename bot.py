@@ -1,36 +1,57 @@
-import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = os.getenv("TOKEN")
-GROUP_ID = -1003745769770  # 你的群ID
+from config import TOKEN, DEFAULT_INTERVAL
+from db import add_group, add_points, get_ranking, set_interval
+from scheduler import start_scheduler
 
-# 普通消息处理（可留可删）
-async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("chat_id:", update.effective_chat.id)
-    await update.message.reply_text("收到 👍")
+# /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    add_group(chat_id)
+    await update.message.reply_text("机器人已启动 🤖")
 
-# 定时发送函数
-async def send_message(context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=GROUP_ID,
-        text="⏰ 每小时自动发送一次消息"
-    )
+# 统计发言积分
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat_id = update.effective_chat.id
+
+    add_points(user.id, chat_id)
+
+# /rank 排行榜
+async def rank(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    ranking = get_ranking(chat_id)
+
+    text = "🏆 排行榜：\n"
+    for i, (user_id, points) in enumerate(ranking, 1):
+        text += f"{i}. {user_id} - {points}\n"
+
+    await update.message.reply_text(text)
+
+# /setinterval 1800
+async def set_interval_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+
+    try:
+        seconds = int(context.args[0])
+        set_interval(chat_id, seconds)
+        await update.message.reply_text(f"间隔已设置为 {seconds} 秒")
+    except:
+        await update.message.reply_text("用法: /setinterval 3600")
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # 监听消息
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("rank", rank))
+    app.add_handler(CommandHandler("setinterval", set_interval_cmd))
 
-    # ⏰ 每3600秒（1小时）执行一次
-    app.job_queue.run_repeating(
-        send_message,
-        interval=30,   # 1小时
-        first=10         # 启动后10秒先发一次（方便测试）
-    )
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("机器人已启动...")
+    start_scheduler(app)
+
+    print("Bot running...")
     app.run_polling()
 
 if __name__ == "__main__":
